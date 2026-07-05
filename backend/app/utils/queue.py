@@ -15,8 +15,18 @@ class RedisQueue:
         """
         redis_client = get_redis()
         if not redis_client:
-            logger.error("Redis client is not initialized. Cannot push to queue.")
-            return False
+            logger.info("Redis client not initialized. Falling back to in-memory asynchronous background task execution.")
+            try:
+                import asyncio
+                from app.worker.worker import process_task
+                from app.db.database import get_mongodb
+                db = get_mongodb()
+                # Run the process_task on the running event loop as a background task
+                asyncio.create_task(process_task(payload, db))
+                return True
+            except Exception as fe:
+                logger.error(f"Failed to launch in-memory background task fallback: {fe}")
+                return False
         
         try:
             serialized_payload = json.dumps(payload, default=str)
@@ -26,6 +36,7 @@ class RedisQueue:
         except Exception as e:
             logger.error(f"Failed to push task to Redis queue: {e}")
             return False
+
 
     async def pop(self, timeout: int = 0) -> Optional[Dict[str, Any]]:
         """

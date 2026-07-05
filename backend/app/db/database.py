@@ -24,10 +24,19 @@ async def connect_to_databases():
     except Exception as e:
         logger.error(f"Failed to create MongoDB indexes: {e}")
 
-    # Connect to Redis
-    logger.info("Connecting to Redis...")
-    db.redis_client = aioredis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
-    logger.info("Connected to Redis successfully.")
+    # Connect to Redis if configured
+    if settings.REDIS_URL:
+        try:
+            logger.info("Connecting to Redis...")
+            db.redis_client = aioredis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+            logger.info("Connected to Redis successfully.")
+        except Exception as re:
+            logger.error(f"Failed to connect to Redis at '{settings.REDIS_URL}': {re}. Continuing without Redis.")
+            db.redis_client = None
+    else:
+        logger.info("Redis not configured. Bypassing Redis connection.")
+        db.redis_client = None
+
 
 async def create_indexes():
     db_conn = get_mongodb()
