@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/varek
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=supersecretjwtkeyforvarekplatformai2026
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - varek-network
+
+  worker:
+    build: .
+    command: python -m app.worker.worker
+    volumes:
+      - .:/workspace
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/varek
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=supersecretjwtkeyforvarekplatformai2026
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - varek-network
+
+  mongodb:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - varek-network
+
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - varek-network
+
+networks:
+  varek-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
