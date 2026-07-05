@@ -3,8 +3,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 import os
 import yaml
-from anthropic import AsyncAnthropic
 from app.core.config import settings
+from app.core.llm_client import LLMClient
 from app.models.task import TaskInDB, TaskStatus, StatusHistoryItem
 from app.models.agent_log import AgentLogCreate, LogStatus
 from app.services.agent_logs import AgentLogService
@@ -16,7 +16,7 @@ class BaseAgent:
         self.agent_name = agent_name
         self.db = db
         self.tools = {}
-        self.client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY", settings.JWT_SECRET))
+        self.client = LLMClient()
         
         # Load agent config from core/agents.yaml
         self.config = {}
@@ -209,48 +209,50 @@ class BaseAgent:
         # Format registered tool models for Anthropic
         anthropic_tools = [t["definition"] for t in self.tools.values()]
         
-        # 3. Call Anthropic
+        # 3. Call LLM
         try:
-            # Fallback if no Anthropic key is set to simulate agent thinking
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            if not api_key:
-                logger.warning("BaseAgent: ANTHROPIC_API_KEY not set. Operating in Simulation/Mock Mode.")
+            # Check if API Key is configured for selected provider
+            has_api_key = False
+            if self.client.provider == "anthropic":
+                has_api_key = bool(settings.ANTHROPIC_API_KEY or os.getenv("ANTHROPIC_API_KEY"))
+            elif self.client.provider == "openai":
+                has_api_key = bool(settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY"))
+            elif self.client.provider == "groq":
+                has_api_key = bool(settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY"))
+            elif self.client.provider == "gemini":
+                has_api_key = bool(settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+            
+            if not has_api_key:
+                logger.warning(f"BaseAgent: API key not set for provider '{self.client.provider}'. Operating in Simulation/Mock Mode.")
                 return await self._simulate_mock_think(task, tool_override_result)
                 
-            response = await self.client.messages.create(
-                model="claude-3-5-sonnet-20240620",
-                max_tokens=1500,
-                system=self.system_prompt,
+            response = await self.client.generate(
                 messages=messages,
+                system_prompt=self.system_prompt,
                 tools=anthropic_tools if anthropic_tools else None
             )
-            
-            # Estimate and log usage cost
-            input_tokens = response.usage.input_tokens
-            output_tokens = response.usage.output_tokens
-            estimated_cost = self._estimate_cost(input_tokens, output_tokens)
             
             await AgentLogService.create(self.db, AgentLogCreate(
                 agent_name=self.agent_name,
                 action="llm_thinking",
                 input={"messages_summary": str(messages)},
                 output={
-                    "text": response.content[0].text if response.content and hasattr(response.content[0], "text") else "",
-                    "tool_calls": [block.model_dump() for block in response.content if block.type == "tool_use"],
-                    "token_usage": {"input": input_tokens, "output": output_tokens},
-                    "cost_estimate": estimated_cost
+                    "text": response.text,
+                    "tool_calls": response.tool_calls,
+                    "token_usage": {"input": response.input_tokens, "output": response.output_tokens},
+                    "cost_estimate": response.cost
                 },
                 status=LogStatus.SUCCESS,
-                cost=estimated_cost,
+                cost=response.cost,
                 related_task_id=task.task_id
             ))
             
             # Analyze responses
-            tool_calls = [block for block in response.content if block.type == "tool_use"]
-            if tool_calls:
-                selected_tool = tool_calls[0]
-                tool_name = selected_tool.name
-                tool_args = selected_tool.input
+            if response.tool_calls:
+                selected_tool = response.tool_calls[0]
+                tool_name = selected_tool["name"]
+                tool_args = selected_tool["input"]
+                tool_id = selected_tool["id"]
                 
                 # Check Approval required
                 requires_approval = await self.check_approval_required(tool_name, tool_args)
@@ -267,31 +269,43 @@ class BaseAgent:
                 # Execute tool directly
                 tool_result = await self.execute_tool(task.task_id, tool_name, tool_args)
                 
-                # Feed result back to Claude to formulate final response
+                # Feed result back to LLM to formulate final response
+                # Format response content
+                if self.client.provider == "anthropic":
+                    assistant_content = [{"type": "text", "text": response.text}]
+                    if response.tool_calls:
+                        for tc in response.tool_calls:
+                            assistant_content.append({
+                                "type": "tool_use",
+                                "id": tc["id"],
+                                "name": tc["name"],
+                                "input": tc["input"]
+                            })
+                else:
+                    assistant_content = response.text
+
                 messages.append({
                     "role": "assistant",
-                    "content": response.content
+                    "content": assistant_content
                 })
                 messages.append({
                     "role": "user",
                     "content": [
                         {
                             "type": "tool_result",
-                            "tool_use_id": selected_tool.id,
+                            "tool_use_id": tool_id,
                             "content": str(tool_result)
                         }
                     ]
                 })
                 
-                # Recall Claude
-                follow_up = await self.client.messages.create(
-                    model="claude-3-5-sonnet-20240620",
-                    max_tokens=1000,
-                    system=self.system_prompt,
-                    messages=messages
+                # Recall LLM
+                follow_up = await self.client.generate(
+                    messages=messages,
+                    system_prompt=self.system_prompt
                 )
                 
-                final_text = follow_up.content[0].text
+                final_text = follow_up.text
                 # Log final thinking step
                 await AgentLogService.create(self.db, AgentLogCreate(
                     agent_name=self.agent_name,
@@ -299,19 +313,20 @@ class BaseAgent:
                     input={"tool_result": str(tool_result)},
                     output={"text": final_text},
                     status=LogStatus.SUCCESS,
-                    cost=self._estimate_cost(follow_up.usage.input_tokens, follow_up.usage.output_tokens),
+                    cost=follow_up.cost,
                     related_task_id=task.task_id
                 ))
                 return {"action": "complete", "result": {"output": final_text}}
                 
             else:
                 # Text response completion
-                final_text = response.content[0].text if response.content else "No reply generated."
+                final_text = response.text if response.text else "No reply generated."
                 return {"action": "complete", "result": {"output": final_text}}
                 
         except Exception as e:
-            logger.exception(f"BaseAgent: Anthropic API call error: {e}")
+            logger.exception(f"BaseAgent: LLM API call error: {e}")
             raise e
+
 
     async def _simulate_mock_think(self, task: TaskInDB, tool_override_result: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

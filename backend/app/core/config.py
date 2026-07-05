@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     MONGO_URI: str
     REDIS_URL: Optional[str] = None
 
+    # LLM Provider Configuration
+    LLM_PROVIDER: str = "anthropic"  # Options: anthropic, gemini, openai, groq
+    LLM_MODEL: Optional[str] = None  # Custom model override
+    ANTHROPIC_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
