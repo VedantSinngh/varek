@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { 
-  Check, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
-  Cpu, 
+import {
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Cpu,
   RefreshCw,
-  Clock
+  Clock,
 } from "lucide-react";
 
 export default function ApprovalsPage() {
@@ -31,93 +31,86 @@ export default function ApprovalsPage() {
     }
   };
 
-  // Poll approvals every 5 seconds
   useEffect(() => {
     fetchApprovals(true);
-    
     let intervalId: any;
     if (polling) {
-      intervalId = setInterval(() => {
-        fetchApprovals(false);
-      }, 5000);
+      intervalId = setInterval(() => fetchApprovals(false), 5000);
     }
-    
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
+    return () => { if (intervalId) clearInterval(intervalId); };
   }, [polling]);
 
   const toggleExpand = (taskId: string) => {
-    setExpandedTasks(prev => ({
-      ...prev,
-      [taskId]: !prev[taskId]
-    }));
+    setExpandedTasks((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
   };
 
   const handleAction = async (taskId: string, decision: "approve" | "reject") => {
-    setActioning(prev => ({ ...prev, [taskId]: true }));
+    setActioning((prev) => ({ ...prev, [taskId]: true }));
     try {
-      const endpoint = `/tasks/${taskId}/${decision}`;
-      await api.post(endpoint);
-      
-      // Update local state to immediately remove task
-      setApprovals(prev => prev.filter(app => app.task_id !== taskId));
+      await api.post(`/tasks/${taskId}/${decision}`);
+      setApprovals((prev) => prev.filter((app) => app.task_id !== taskId));
       alert(`Task successfully ${decision}d!`);
     } catch (err: any) {
-      console.error(`Error during task ${decision}:`, err);
       alert(`Action failed: ${err.response?.data?.detail || "Connection error"}`);
     } finally {
-      setActioning(prev => ({ ...prev, [taskId]: false }));
+      setActioning((prev) => ({ ...prev, [taskId]: false }));
       fetchApprovals(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Sub Header controls */}
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-[#111827] px-6 py-4">
+      {/* Controls bar */}
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-adminBorder bg-adminCard px-6 py-4">
         <div className="flex items-center gap-4">
           <button
             onClick={() => fetchApprovals(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-800/40 hover:bg-slate-800 px-3 py-1.5 text-xs text-slate-300 font-semibold transition-all"
+            className="flex items-center gap-1.5 rounded-lg border border-adminBorder bg-adminBorder/40 hover:border-adminGold/40 hover:text-adminGold px-3 py-1.5 font-mono-brand text-[10px] uppercase tracking-widest text-adminMuted transition-all"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh Queue
           </button>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-400 select-none">
+          <label className="flex items-center gap-2 font-mono-brand text-[10px] uppercase tracking-widest text-adminMuted select-none cursor-pointer">
             <input
               type="checkbox"
               checked={polling}
               onChange={(e) => setPolling(e.target.checked)}
-              className="rounded border-slate-800 bg-[#1f2937] text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-adminBorder bg-adminBg text-adminGold focus:ring-adminGold/40"
             />
             Auto-refresh (5s)
           </label>
         </div>
-        <div className="text-xs text-slate-400">
-          Awaiting Action: <span className="font-bold text-amber-400">{approvals.length}</span>
+        <div className="font-mono-brand text-[10px] uppercase tracking-widest text-adminMuted">
+          Awaiting:{" "}
+          <span className="font-bold text-amber-400">{approvals.length}</span>
         </div>
       </div>
 
       {/* Approvals Listing */}
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-adminGold border-t-transparent" />
         </div>
       ) : approvals.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-8 text-slate-400">
-          <Clock className="h-8 w-8 text-slate-600 mb-2" />
-          <p className="text-sm font-semibold">No pending approvals</p>
-          <p className="text-xs text-slate-500 mt-1">All agent tasks are flowing smoothly or have been validated.</p>
+        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-adminBorder p-8 text-adminMuted">
+          <Clock className="h-8 w-8 text-adminBorder mb-3" />
+          <p className="font-mono-brand text-[11px] uppercase tracking-widest font-bold">
+            No pending approvals
+          </p>
+          <p className="font-mono-brand text-[10px] uppercase tracking-widest text-adminMuted/60 mt-1">
+            All agent tasks are flowing smoothly.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
           {approvals.map((task) => {
             const isExpanded = !!expandedTasks[task.task_id];
             const isProcessing = !!actioning[task.task_id];
-            const agentName = task.proposed_action_log?.agent_name || task.target_agent || "executive";
-            
-            // Generate action summaries based on tool arguments
+            const agentName =
+              task.proposed_action_log?.agent_name ||
+              task.target_agent ||
+              "executive";
+
             const toolCall = task.pending_tool_call;
             let actionSummary = "Proposing unknown action";
             if (toolCall) {
@@ -129,28 +122,36 @@ export default function ApprovalsPage() {
               } else if (toolCall.tool_name === "update_stock") {
                 actionSummary = `Adjust stock levels for SKU ${args.sku} by ${args.quantity_delta}`;
               } else if (toolCall.tool_name === "send_response") {
-                actionSummary = `Send compensation/refund support message to ${args.customer_email}`;
+                actionSummary = `Send compensation message to ${args.customer_email}`;
               }
             }
 
             return (
-              <div 
-                key={task.task_id} 
-                className="rounded-xl border border-slate-800 bg-[#111827] overflow-hidden flex flex-col transition-all hover:border-slate-700"
+              <div
+                key={task.task_id}
+                className="rounded-xl border border-adminBorder bg-adminCard overflow-hidden transition-all hover:border-adminGold/20"
               >
                 {/* Header Row */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-6 gap-4 border-b border-slate-800/60 bg-[#1e293b]/20">
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-6 gap-4 border-b border-adminBorder/60 bg-adminBg/40">
                   <div className="flex items-start gap-4">
-                    <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-400 shrink-0">
-                      <Cpu className="h-5 w-5" />
+                    <div className="rounded-lg bg-adminGold/10 p-2 text-adminGold shrink-0 border border-adminGold/20">
+                      <Cpu className="h-4 w-4" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-indigo-400 uppercase tracking-wide">Agent: {agentName}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Task: {task.task_id}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono-brand text-[10px] font-bold text-adminGold uppercase tracking-widest">
+                          Agent: {agentName}
+                        </span>
+                        <span className="font-mono text-[10px] text-adminMuted">
+                          {task.task_id}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-bold text-white mt-1">{task.title}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{task.description}</p>
+                      <h4 className="text-sm font-bold text-adminText mt-1">
+                        {task.title}
+                      </h4>
+                      <p className="text-xs text-adminMuted mt-0.5">
+                        {task.description}
+                      </p>
                     </div>
                   </div>
 
@@ -160,49 +161,59 @@ export default function ApprovalsPage() {
                       disabled={isProcessing}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500 hover:text-white px-4 py-2 text-xs font-bold text-red-400 disabled:opacity-50 transition-all"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                       Reject
                     </button>
                     <button
                       onClick={() => handleAction(task.task_id, "approve")}
                       disabled={isProcessing}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-xs font-bold text-[#0b0f19] disabled:opacity-50 transition-all"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-xs font-bold text-adminBg disabled:opacity-50 transition-all"
                     >
-                      <Check className="h-4 w-4" />
+                      <Check className="h-3.5 w-3.5" />
                       Approve
                     </button>
                   </div>
                 </div>
 
-                {/* Body Row (Proposals & Collapsible Details) */}
-                <div className="px-6 py-4 bg-slate-900/10 flex flex-col gap-3">
+                {/* Body Row */}
+                <div className="px-6 py-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between text-xs">
                     <div>
-                      <span className="text-slate-500 uppercase tracking-wider font-bold text-[10px] block">Proposed Action</span>
-                      <span className="text-white font-semibold">{actionSummary}</span>
+                      <span className="font-mono-brand text-[10px] font-bold text-adminMuted uppercase tracking-widest block">
+                        Proposed Action
+                      </span>
+                      <span className="text-adminText font-semibold">{actionSummary}</span>
                     </div>
                     <button
                       onClick={() => toggleExpand(task.task_id)}
-                      className="text-slate-500 hover:text-white flex items-center gap-1 text-[11px] font-semibold"
+                      className="font-mono-brand text-[10px] uppercase tracking-widest text-adminMuted hover:text-adminGold flex items-center gap-1 transition-colors"
                     >
                       {isExpanded ? (
                         <>Hide Details <ChevronUp className="h-3 w-3" /></>
                       ) : (
-                        <>Inspect Details <ChevronDown className="h-3 w-3" /></>
+                        <>Inspect <ChevronDown className="h-3 w-3" /></>
                       )}
                     </button>
                   </div>
 
                   {isExpanded && (
-                    <div className="rounded-lg border border-slate-800 bg-[#0b0f19] p-4 font-mono text-[11px] text-slate-400 space-y-3">
+                    <div className="rounded-lg border border-adminBorder bg-adminBg p-4 font-mono text-[11px] text-adminMuted space-y-3">
                       <div>
-                        <span className="text-indigo-400 font-bold uppercase text-[9px] block mb-1">Raw Payload</span>
-                        <pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(task.payload, null, 2)}</pre>
+                        <span className="font-mono-brand text-[9px] font-bold text-adminGold uppercase tracking-widest block mb-1">
+                          Raw Payload
+                        </span>
+                        <pre className="overflow-x-auto whitespace-pre-wrap">
+                          {JSON.stringify(task.payload, null, 2)}
+                        </pre>
                       </div>
                       {toolCall && (
                         <div>
-                          <span className="text-indigo-400 font-bold uppercase text-[9px] block mb-1">Tool Input</span>
-                          <pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(toolCall, null, 2)}</pre>
+                          <span className="font-mono-brand text-[9px] font-bold text-adminGold uppercase tracking-widest block mb-1">
+                            Tool Input
+                          </span>
+                          <pre className="overflow-x-auto whitespace-pre-wrap">
+                            {JSON.stringify(toolCall, null, 2)}
+                          </pre>
                         </div>
                       )}
                     </div>

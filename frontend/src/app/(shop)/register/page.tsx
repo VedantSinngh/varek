@@ -17,102 +17,101 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      await api.post("/auth/register", {
-        name,
-        email,
-        password,
-        role: "customer" // customer role by default
-      });
-
-      // Redirect to login page on success
-      alert("Registration successful! Please sign in.");
+      await api.post("/auth/register", { name, email, password, role: "customer" });
       router.push("/login");
     } catch (err: any) {
-      console.error(err);
-      setError(
-        err.response?.data?.detail || "Registration failed. Email may already be registered."
-      );
+      setError(err.response?.data?.detail || "Registration failed. Email may already be registered.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0b0f19] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#111827] p-8 shadow-xl">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-white">Join Varek.in</h2>
-          <p className="mt-2 text-sm text-slate-400">Create a customer profile to start shopping</p>
+    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-16">
+      {/* Grain overlay */}
+      <div className="fixed inset-0 pointer-events-none opacity-30"
+        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E\")" }}
+      />
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Brand */}
+        <div className="text-center mb-10">
+          <Link href="/" className="font-display text-5xl text-ink font-semibold hover:text-rust transition-colors">
+            Varek
+          </Link>
+          <p className="font-mono-brand text-[11px] uppercase tracking-widest text-ink/50 mt-3 font-bold">
+            Create your account
+          </p>
         </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+
+        {/* Card */}
+        <div className="bg-paper rounded-2xl border border-line p-8 stitched">
           {error && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+            <div className="mb-6 rounded-lg border border-rust/20 bg-rust/8 p-4 font-mono-brand text-[11px] uppercase tracking-widest text-rust font-bold">
               {error}
             </div>
           )}
-          
-          <div className="space-y-4 rounded-md shadow-sm">
+
+          <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Full Name</label>
+              <label className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/50 font-bold block mb-1.5">Full Name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-slate-800 bg-[#1f2937] px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 placeholder="John Doe"
+                className="w-full rounded-lg border border-line bg-cream px-4 py-3 text-sm text-ink placeholder-ink/30 focus:outline-none focus:ring-2 focus:ring-rust/20 focus:border-rust/50 transition-colors"
               />
             </div>
-            
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Email Address</label>
+              <label className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/50 font-bold block mb-1.5">Email Address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-slate-800 bg-[#1f2937] px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="customer@email.com"
+                placeholder="you@email.com"
+                className="w-full rounded-lg border border-line bg-cream px-4 py-3 text-sm text-ink placeholder-ink/30 focus:outline-none focus:ring-2 focus:ring-rust/20 focus:border-rust/50 transition-colors"
               />
             </div>
-            
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Password</label>
+              <label className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/50 font-bold block mb-1.5">Password</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-slate-800 bg-[#1f2937] px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 placeholder="••••••••"
+                className="w-full rounded-lg border border-line bg-cream px-4 py-3 text-sm text-ink placeholder-ink/30 focus:outline-none focus:ring-2 focus:ring-rust/20 focus:border-rust/50 transition-colors"
               />
             </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex w-full justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-500 disabled:opacity-50"
+              className="btn-primary w-full justify-center mt-2 py-4 disabled:opacity-60"
             >
               {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-cream border-t-transparent" />
               ) : (
-                "Create Profile"
+                "Create Account"
               )}
             </button>
-          </div>
+          </form>
 
-          <div className="text-center text-xs text-slate-400">
-            Already have an account?{" "}
-            <Link href="/login" className="font-bold text-indigo-400 hover:text-indigo-300">
+          <div className="mt-6 text-center">
+            <span className="font-mono-brand text-[11px] uppercase tracking-widest text-ink/40">Already have an account? </span>
+            <Link href="/login" className="font-mono-brand text-[11px] uppercase tracking-widest text-rust font-bold hover:underline">
               Sign In
             </Link>
           </div>
-        </form>
+        </div>
+
+        <p className="text-center font-mono-brand text-[10px] uppercase tracking-widest text-ink/30 mt-8">
+          © {new Date().getFullYear()} Varek — Curated Vintage
+        </p>
       </div>
     </div>
   );

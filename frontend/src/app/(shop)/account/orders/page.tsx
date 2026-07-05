@@ -26,62 +26,82 @@ export default function CustomerOrdersHistory() {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div>
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-rust border-t-transparent" />
       </div>
     );
   }
 
+  const statusColor = (s: string) => {
+    if (s === "delivered") return "bg-olive/10 border-olive/20 text-olive";
+    if (s === "pending") return "bg-mustard/10 border-mustard/20 text-mustard";
+    if (s === "cancelled") return "bg-rust/10 border-rust/20 text-rust";
+    return "bg-denim/10 border-denim/20 text-denim";
+  };
+
   return (
     <div className="space-y-6">
-      <div className="border-b border-slate-800 pb-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Purchase History</h3>
-        <p className="text-[10px] text-slate-500 mt-1">Review tracking statuses of past purchases.</p>
+      <div className="border-b border-line pb-4">
+        <h2 className="font-display text-2xl text-ink font-semibold">Order History</h2>
+        <p className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/40 mt-1 font-bold">
+          Track statuses of past purchases.
+        </p>
       </div>
 
       {orders.length === 0 ? (
-        <div className="text-center py-12 text-slate-550 space-y-3">
-          <ClipboardList className="h-8 w-8 text-slate-700 mx-auto" />
-          <p className="text-xs font-semibold text-slate-400">No transactions recorded yet</p>
-          <Link href="/shop" className="inline-block text-xs text-indigo-400 hover:text-indigo-300 font-bold">
-            Shop catalog
+        <div className="text-center py-16 space-y-4">
+          <ClipboardList className="h-8 w-8 text-ink/20 mx-auto" />
+          <p className="font-mono-brand text-[11px] uppercase tracking-widest text-ink/40 font-bold">
+            No orders yet
+          </p>
+          <Link
+            href="/shop"
+            className="font-mono-brand text-[11px] uppercase tracking-widest text-rust font-bold hover:underline inline-flex items-center gap-1"
+          >
+            Browse the Shop <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/10">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-[#1f2937]/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+        <div className="overflow-x-auto rounded-xl border border-line">
+          <table className="w-full text-left text-xs text-ink">
+            <thead className="border-b border-line bg-paper text-[10px] font-bold text-ink/40 uppercase tracking-widest">
               <tr>
                 <th className="px-4 py-3">Order ID</th>
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Items Count</th>
-                <th className="px-4 py-3">Total Cost</th>
+                <th className="px-4 py-3">Items</th>
+                <th className="px-4 py-3">Total</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-line">
               {orders.map((o) => (
-                <tr key={o._id} className="hover:bg-slate-800/20">
-                  <td className="px-4 py-3 font-mono text-[11px] text-white truncate max-w-[120px]">{o._id}</td>
-                  <td className="px-4 py-3 text-[11px] text-slate-450">{new Date(o.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-slate-400">
+                <tr
+                  key={o._id}
+                  className="hover:bg-cream/60 transition-colors"
+                >
+                  <td className="px-4 py-3 font-mono text-[11px] text-ink font-bold truncate max-w-[120px]">
+                    {o._id}
+                  </td>
+                  <td className="px-4 py-3 text-ink/60">
+                    {new Date(o.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-ink/60">
                     {o.items.reduce((sum: number, it: any) => sum + it.qty, 0)}
                   </td>
-                  <td className="px-4 py-3 font-bold text-white">${o.total_amount.toFixed(2)}</td>
+                  <td className="px-4 py-3 font-mono-brand font-bold text-ink">
+                    ₹{o.total_amount.toFixed(0)}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
-                      o.status === "delivered" ? "bg-emerald-500/15 text-emerald-400" :
-                      o.status === "pending" ? "bg-amber-500/15 text-amber-400" :
-                      o.status === "cancelled" ? "bg-red-500/15 text-red-400" :
-                      "bg-indigo-500/15 text-indigo-400"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono-brand text-[9px] font-bold uppercase tracking-widest ${statusColor(o.status)}`}
+                    >
                       {o.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/account/orders/${o._id}`}
-                      className="inline-flex items-center gap-1 rounded bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[10px] font-bold text-white transition-colors"
+                      className="inline-flex items-center gap-1 rounded border border-line bg-paper hover:border-rust/40 hover:text-rust px-2.5 py-1 font-mono-brand text-[10px] font-bold uppercase tracking-widest text-ink/60 transition-all"
                     >
                       Track <ArrowRight className="h-3 w-3" />
                     </Link>

@@ -12,7 +12,6 @@ export default function CartPage() {
   const handleProceedToCheckout = () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      // Redirect to login, but we can set a redirect target in query parameters
       router.push("/login?redirect=/checkout");
     } else {
       router.push("/checkout");
@@ -20,117 +19,128 @@ export default function CartPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12 space-y-8">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold uppercase tracking-wider text-white">Your Shopping Cart</h2>
+    <div className="bg-cream min-h-screen">
+      {/* Page header */}
+      <div className="bg-paper border-b border-line py-12 px-6 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <p className="eyebrow mb-2">Your bag</p>
+          <h1 className="font-display text-5xl text-ink font-semibold">Shopping Bag</h1>
+        </div>
       </div>
 
-      {cart.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-800 py-16 text-center text-slate-500 space-y-4">
-          <ShoppingBag className="h-10 w-10 text-slate-700 mx-auto" />
-          <p className="text-sm font-semibold">Your cart is currently empty</p>
-          <p className="text-xs text-slate-600 mt-1">Browse our shop to add active designs to your bag.</p>
-          <div className="pt-2">
-            <Link
-              href="/shop"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-50"
-            >
-              Start Shopping
+      <div className="mx-auto max-w-5xl px-6 sm:px-8 py-12">
+        {cart.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-line py-20 text-center space-y-6">
+            <ShoppingBag className="h-12 w-12 text-ink/20 mx-auto" />
+            <div>
+              <p className="font-display text-2xl text-ink font-semibold">Your bag is empty</p>
+              <p className="font-mono-brand text-[11px] uppercase tracking-widest text-ink/40 mt-2">Find something worth keeping.</p>
+            </div>
+            <Link href="/shop" className="btn-primary inline-flex">
+              Browse the Shop <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-        </div>
-      ) : (
-        <div className="grid gap-8 md:grid-cols-3">
-          {/* Items List */}
-          <div className="md:col-span-2 space-y-4">
-            {cart.map((item) => (
-              <div
-                key={item.product_id}
-                className="flex items-center gap-4 rounded-xl border border-slate-800 bg-[#111827] p-4 relative"
-              >
-                {/* Thumbnail */}
-                <div className="h-16 w-16 rounded-lg bg-slate-900 flex items-center justify-center text-slate-600 shrink-0 overflow-hidden border border-slate-800">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <ShoppingBag className="h-6 w-6" />
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-xs font-bold text-white tracking-wide">{item.name}</h3>
-                  <div className="flex gap-2 text-[10px] text-slate-400 font-semibold mt-1">
-                    {item.size && <span>Size: {item.size.toUpperCase()}</span>}
-                    {item.color && <span>Color: {item.color.toUpperCase()}</span>}
-                    <span>SKU: {item.sku}</span>
+        ) : (
+          <div className="grid gap-10 md:grid-cols-3">
+            {/* Items */}
+            <div className="md:col-span-2 space-y-4">
+              {cart.map((item) => (
+                <div
+                  key={item.product_id}
+                  className="flex items-center gap-5 rounded-xl border border-line bg-paper p-5 stitched"
+                >
+                  {/* Thumb */}
+                  <div className="h-20 w-20 rounded-lg overflow-hidden border border-line shrink-0 bg-cream">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <ShoppingBag className="h-6 w-6 text-ink/20" />
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3 mt-3">
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-lg text-ink font-semibold truncate">{item.name}</h3>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {item.size && <span className="chip">{item.size}</span>}
+                      {item.color && <span className="chip">{item.color}</span>}
+                      <span className="chip">{item.sku}</span>
+                    </div>
+                    {/* Qty controls */}
+                    <div className="flex items-center gap-3 mt-3">
+                      <button
+                        onClick={() => updateQty(item.product_id, item.qty - 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded border border-line bg-cream text-ink font-bold text-sm hover:border-rust/50 transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="font-mono-brand text-sm font-bold text-ink w-5 text-center">{item.qty}</span>
+                      <button
+                        onClick={() => updateQty(item.product_id, item.qty + 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded border border-line bg-cream text-ink font-bold text-sm hover:border-rust/50 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Price / Remove */}
+                  <div className="flex flex-col items-end justify-between h-20 shrink-0">
                     <button
-                      onClick={() => updateQty(item.product_id, item.qty - 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded border border-slate-800 bg-slate-900 text-xs text-slate-400 hover:bg-slate-800 font-bold"
+                      onClick={() => removeFromCart(item.product_id)}
+                      className="text-ink/30 hover:text-rust transition-colors"
                     >
-                      -
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                    <span className="text-xs font-semibold text-white w-4 text-center">{item.qty}</span>
-                    <button
-                      onClick={() => updateQty(item.product_id, item.qty + 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded border border-slate-800 bg-slate-900 text-xs text-slate-400 hover:bg-slate-800 font-bold"
-                    >
-                      +
-                    </button>
+                    <span className="font-mono-brand text-sm font-bold text-ink">
+                      ₹{(item.price * item.qty).toFixed(0)}
+                    </span>
                   </div>
                 </div>
+              ))}
 
-                {/* Price / Delete */}
-                <div className="text-right flex flex-col justify-between items-end h-16 pl-2 shrink-0">
-                  <button
-                    onClick={() => removeFromCart(item.product_id)}
-                    className="text-slate-500 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  <span className="text-xs font-bold text-indigo-400">${(item.price * item.qty).toFixed(2)}</span>
-                </div>
-              </div>
-            ))}
-            
-            <Link href="/shop" className="inline-flex items-center gap-1 text-xs text-slate-400 font-semibold hover:text-white transition-colors">
-              <ArrowLeft className="h-3.5 w-3.5" /> Continue Shopping
-            </Link>
-          </div>
-
-          {/* Cart Summary */}
-          <aside className="rounded-xl border border-slate-800 bg-[#111827] p-6 space-y-6 h-fit">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-              Order Summary
-            </h3>
-            
-            <div className="space-y-4 text-xs">
-              <div className="flex justify-between text-slate-400">
-                <span>Subtotal</span>
-                <span className="font-semibold text-white">${cartSubtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Shipping</span>
-                <span className="text-emerald-400 font-semibold">FREE</span>
-              </div>
-              <div className="border-t border-slate-800 pt-4 flex justify-between text-sm font-bold">
-                <span className="text-white">Total</span>
-                <span className="text-indigo-400">${cartSubtotal.toFixed(2)}</span>
-              </div>
+              <Link href="/shop" className="inline-flex items-center gap-1.5 font-mono-brand text-[11px] uppercase tracking-widest text-ink/50 hover:text-rust font-bold transition-colors mt-2">
+                <ArrowLeft className="h-3.5 w-3.5" /> Continue Shopping
+              </Link>
             </div>
 
-            <button
-              onClick={handleProceedToCheckout}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-3.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/10 transition-all uppercase tracking-wider"
-            >
-              Proceed to Checkout
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </aside>
-        </div>
-      )}
+            {/* Summary */}
+            <aside className="rounded-xl border border-line bg-paper p-7 space-y-6 h-fit stitched">
+              <h3 className="font-mono-brand text-[11px] uppercase tracking-widest text-ink font-bold border-b border-line pb-3">
+                Order Summary
+              </h3>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between text-ink/60">
+                  <span>Subtotal</span>
+                  <span className="font-semibold text-ink">₹{cartSubtotal.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between text-ink/60">
+                  <span>Shipping</span>
+                  <span className="font-bold text-olive">Free</span>
+                </div>
+                <div className="border-t border-line pt-3 flex justify-between font-bold">
+                  <span className="text-ink">Total</span>
+                  <span className="font-mono-brand text-ink">₹{cartSubtotal.toFixed(0)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleProceedToCheckout}
+                className="btn-primary w-full justify-center"
+              >
+                Proceed to Checkout <ArrowRight className="h-4 w-4" />
+              </button>
+
+              <p className="text-center font-mono-brand text-[10px] uppercase tracking-widest text-ink/30">
+                Free shipping · 48hr dispatch
+              </p>
+            </aside>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

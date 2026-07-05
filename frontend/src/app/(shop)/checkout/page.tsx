@@ -4,255 +4,143 @@ import { useEffect, useState } from "react";
 import { useCart } from "../CartContext";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { CreditCard, Truck, ShoppingBag, Lock, Check } from "lucide-react";
+import { Truck, CreditCard, ShoppingBag, Lock, Check } from "lucide-react";
+
+function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div>
+      <label className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/50 font-bold block mb-1.5">{label}</label>
+      <input
+        {...props}
+        className="w-full rounded-lg border border-line bg-cream px-4 py-3 text-sm text-ink placeholder-ink/30 focus:outline-none focus:ring-2 focus:ring-rust/20 focus:border-rust/50 transition-colors"
+      />
+    </div>
+  );
+}
 
 export default function CheckoutPage() {
   const { cart, cartSubtotal, clearCart } = useCart();
   const router = useRouter();
 
-  const [shippingAddress, setShippingAddress] = useState({
-    street: "",
-    city: "",
-    state: "",
-    zip_code: "",
-    country: "USA",
-  });
+  const [addr, setAddr] = useState({ street: "", city: "", state: "", zip_code: "", country: "India" });
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVC, setCardCVC] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [intentData, setIntentData] = useState<any>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login?redirect=/checkout");
-    } else if (cart.length === 0) {
-      router.push("/cart");
-    }
+    if (!token) { router.push("/login?redirect=/checkout"); return; }
+    if (cart.length === 0) { router.push("/cart"); }
   }, [cart, router]);
 
-  const handleSubmitPayment = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // 1. Create order and payment intent
-      const payload = {
-        items: cart.map(it => ({
-          product_id: it.product_id,
-          qty: it.qty
-        })),
-        shipping_address: shippingAddress
-      };
-
-      const res = await api.post("/orders/create-payment-intent", payload);
+      const res = await api.post("/orders/create-payment-intent", {
+        items: cart.map((it) => ({ product_id: it.product_id, qty: it.qty })),
+        shipping_address: addr,
+      });
       const { order_id, payment_intent_id } = res.data;
-
-      // 2. Trigger Stripe webhook simulation locally
-      const webhookPayload = {
+      await api.post("/orders/webhook", {
         type: "payment_intent.succeeded",
-        data: {
-          object: {
-            id: payment_intent_id
-          }
-        }
-      };
-
-      // Call the webhook endpoint directly (simulating Stripe server callback)
-      await api.post("/orders/webhook", webhookPayload);
-
-      // 3. Clear cart and route to confirmation
+        data: { object: { id: payment_intent_id } },
+      });
       clearCart();
       router.push(`/orders/${order_id}/confirmation`);
     } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.detail || "Checkout failed. Please verify stock quantities.");
+      alert(err.response?.data?.detail || "Checkout failed. Please check your details.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12 space-y-8">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold uppercase tracking-wider text-white">Secure Checkout</h2>
+    <div className="bg-cream min-h-screen">
+      <div className="bg-paper border-b border-line py-12 px-6 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <p className="eyebrow mb-2">Almost there</p>
+          <h1 className="font-display text-5xl text-ink font-semibold">Checkout</h1>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmitPayment} className="grid gap-8 md:grid-cols-3">
-        {/* Forms column */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Shipping Address */}
-          <div className="rounded-xl border border-slate-800 bg-[#111827] p-6 space-y-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Truck className="h-4 w-4 text-indigo-400" />
-              Shipping Information
+      <div className="mx-auto max-w-5xl px-6 sm:px-8 py-12">
+        <form onSubmit={handleSubmit} className="grid gap-10 md:grid-cols-3">
+          <div className="md:col-span-2 space-y-6">
+            {/* Shipping */}
+            <div className="rounded-xl border border-line bg-paper p-7 space-y-5 stitched">
+              <h3 className="font-mono-brand text-[11px] uppercase tracking-widest text-ink font-bold border-b border-line pb-3 flex items-center gap-2">
+                <Truck className="h-4 w-4 text-rust" /> Shipping Address
+              </h3>
+              <Field label="Street Address" type="text" required value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} placeholder="123 Main Street" />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="City" type="text" required value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} placeholder="Mumbai" />
+                <Field label="State" type="text" required value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} placeholder="Maharashtra" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Postal Code" type="text" required value={addr.zip_code} onChange={(e) => setAddr({ ...addr, zip_code: e.target.value })} placeholder="400001" />
+                <Field label="Country" type="text" required value={addr.country} onChange={(e) => setAddr({ ...addr, country: e.target.value })} placeholder="India" />
+              </div>
+            </div>
+
+            {/* Payment */}
+            <div className="rounded-xl border border-line bg-paper p-7 space-y-5 stitched">
+              <h3 className="font-mono-brand text-[11px] uppercase tracking-widest text-ink font-bold border-b border-line pb-3 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-rust" /> Payment Details
+              </h3>
+              <Field label="Card Number" type="text" required value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="4242 4242 4242 4242" />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Expiry" type="text" required value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} placeholder="MM / YY" />
+                <Field label="CVC" type="text" required value={cardCVC} onChange={(e) => setCardCVC(e.target.value)} placeholder="123" />
+              </div>
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <aside className="rounded-xl border border-line bg-paper p-7 space-y-6 h-fit stitched">
+            <h3 className="font-mono-brand text-[11px] uppercase tracking-widest text-ink font-bold border-b border-line pb-3 flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-ink/50" /> Your Order
             </h3>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Street Address</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.street}
-                  onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
-                  placeholder="123 Main St"
-                  className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                />
-              </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">City</label>
-                  <input
-                    type="text"
-                    required
-                    value={shippingAddress.city}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                    placeholder="New York"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                  />
+            <div className="space-y-3 max-h-48 overflow-y-auto">
+              {cart.map((item) => (
+                <div key={item.product_id} className="flex justify-between items-center text-sm gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink truncate">{item.name}</p>
+                    <p className="font-mono-brand text-[10px] text-ink/40 uppercase tracking-widest">Qty: {item.qty}{item.size ? ` · ${item.size}` : ""}</p>
+                  </div>
+                  <span className="font-mono-brand text-sm font-bold text-ink shrink-0">₹{(item.price * item.qty).toFixed(0)}</span>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">State</label>
-                  <input
-                    type="text"
-                    required
-                    value={shippingAddress.state}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                    placeholder="NY"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                  />
-                </div>
-              </div>
+              ))}
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Postal Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={shippingAddress.zip_code}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, zip_code: e.target.value })}
-                    placeholder="10001"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Country</label>
-                  <input
-                    type="text"
-                    required
-                    value={shippingAddress.country}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
-                    placeholder="USA"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
+            <div className="border-t border-line pt-4 space-y-2 text-sm">
+              <div className="flex justify-between text-ink/60"><span>Shipping</span><span className="font-bold text-olive">Free</span></div>
+              <div className="flex justify-between font-bold text-ink pt-1 border-t border-line">
+                <span>Total</span>
+                <span className="font-mono-brand">₹{cartSubtotal.toFixed(0)}</span>
               </div>
             </div>
-          </div>
 
-          {/* Card Billing info */}
-          <div className="rounded-xl border border-slate-800 bg-[#111827] p-6 space-y-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
-              <CreditCard className="h-4 w-4 text-indigo-400" />
-              Payment Credentials
-            </h3>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Card Number</label>
-                <input
-                  type="text"
-                  required
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  placeholder="4242 4242 4242 4242 (Stripe Test)"
-                  className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                />
-              </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full justify-center disabled:opacity-60"
+            >
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-cream border-t-transparent" />
+              ) : (
+                <><Lock className="h-3.5 w-3.5" /> Place Order</>
+              )}
+            </button>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Expiration Date</label>
-                  <input
-                    type="text"
-                    required
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(e.target.value)}
-                    placeholder="MM / YY"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CVC</label>
-                  <input
-                    type="text"
-                    required
-                    value={cardCVC}
-                    onChange={(e) => setCardCVC(e.target.value)}
-                    placeholder="123"
-                    className="w-full rounded-lg border border-slate-800 bg-[#1f2937] px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Order review aside */}
-        <aside className="rounded-xl border border-slate-800 bg-[#111827] p-6 space-y-6 h-fit">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
-            <ShoppingBag className="h-4 w-4 text-slate-400" />
-            Review Order
-          </h3>
-
-          <div className="divide-y divide-slate-800 space-y-3 max-h-48 overflow-y-auto pr-1">
-            {cart.map((item) => (
-              <div key={item.product_id} className="flex justify-between items-center text-xs pt-3 first:pt-0">
-                <div className="min-w-0 pr-2">
-                  <p className="font-semibold text-slate-200 truncate">{item.name}</p>
-                  <span className="text-[10px] text-slate-500">Qty: {item.qty} {item.size && `| Size: ${item.size}`}</span>
-                </div>
-                <span className="font-bold text-white shrink-0">${(item.price * item.qty).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-slate-800 pt-4 space-y-3 text-xs">
-            <div className="flex justify-between text-slate-400">
-              <span>Shipping cost</span>
-              <span className="text-emerald-400 font-semibold">FREE</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span>Tax</span>
-              <span className="font-semibold text-white">$0.00</span>
-            </div>
-            <div className="border-t border-slate-850 pt-3 flex justify-between text-sm font-bold">
-              <span className="text-white">Total Amount</span>
-              <span className="text-indigo-400">${cartSubtotal.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-3.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/10 transition-all uppercase tracking-wider disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-            ) : (
-              <>
-                <Lock className="h-3.5 w-3.5" />
-                Submit Payment
-              </>
-            )}
-          </button>
-        </aside>
-      </form>
+            <p className="font-mono-brand text-[10px] uppercase tracking-widest text-ink/30 text-center">
+              Secure · 48hr dispatch · Free returns
+            </p>
+          </aside>
+        </form>
+      </div>
     </div>
   );
 }

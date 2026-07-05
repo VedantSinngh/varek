@@ -25,8 +25,8 @@ export default function AccountLayout({
 
   if (!authenticated) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+      <div className="flex h-64 items-center justify-center bg-cream">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-rust border-t-transparent" />
       </div>
     );
   }
@@ -37,39 +37,54 @@ export default function AccountLayout({
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="grid gap-8 md:grid-cols-4">
-        {/* Navigation Sidebar */}
-        <aside className="space-y-2">
-          <Link href="/shop" className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 uppercase hover:text-white mb-4 transition-colors">
-            <ArrowLeft className="h-3 w-3" /> Back to Store
-          </Link>
-          
-          <div className="space-y-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = pathname === tab.href;
-              return (
-                <Link
-                  key={tab.name}
-                  href={tab.href}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all ${
-                    isActive
-                      ? "bg-slate-800 text-white"
-                      : "text-slate-400 hover:bg-slate-800/30 hover:text-white"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 text-indigo-400" />
-                  {tab.name}
-                </Link>
-              );
-            })}
-          </div>
-        </aside>
+    <div className="bg-cream min-h-screen">
+      {/* Page header */}
+      <div className="bg-paper border-b border-line py-12 px-6 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <p className="eyebrow mb-2">Your account</p>
+          <h1 className="font-display text-5xl text-ink font-semibold">Account</h1>
+        </div>
+      </div>
 
-        {/* Content Pane */}
-        <div className="md:col-span-3 rounded-xl border border-slate-800 bg-[#111827] p-6 sm:p-8 min-h-[400px]">
-          {children}
+      <div className="mx-auto max-w-5xl px-6 sm:px-8 py-12">
+        <div className="grid gap-8 md:grid-cols-4">
+          {/* Navigation Sidebar */}
+          <aside className="space-y-2">
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-1.5 font-mono-brand text-[11px] uppercase tracking-widest text-ink/50 hover:text-rust font-bold mb-6 transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Store
+            </Link>
+
+            <div className="space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = pathname === tab.href;
+                return (
+                  <Link
+                    key={tab.name}
+                    href={tab.href}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-mono-brand text-[11px] uppercase tracking-widest font-bold transition-all ${
+                      isActive
+                        ? "bg-paper border border-line text-ink"
+                        : "text-ink/50 hover:bg-paper hover:text-ink"
+                    }`}
+                  >
+                    <Icon
+                      className={`h-3.5 w-3.5 ${isActive ? "text-rust" : "text-ink/40"}`}
+                    />
+                    {tab.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Content Pane */}
+          <div className="md:col-span-3 rounded-xl border border-line bg-paper p-6 sm:p-8 min-h-[400px] stitched">
+            {children}
+          </div>
         </div>
       </div>
     </div>

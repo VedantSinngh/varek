@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import Link from "next/link";
-import { CheckCircle, ShoppingBag, MapPin, ArrowRight } from "lucide-react";
+import { CheckCircle, MapPin, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function OrderConfirmation() {
   const { id } = useParams();
@@ -27,86 +27,110 @@ export default function OrderConfirmation() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+      <div className="flex h-64 items-center justify-center bg-cream">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-rust border-t-transparent" />
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="mx-auto max-w-lg px-6 py-16 text-center space-y-4">
-        <h2 className="text-xl font-bold text-white">Order Not Found</h2>
-        <p className="text-xs text-slate-500">The referenced order details could not be retrieved.</p>
-        <Link href="/" className="inline-block text-xs font-bold text-indigo-400 hover:text-indigo-300">
-          Back to Store
-        </Link>
+      <div className="bg-cream min-h-screen flex items-center justify-center px-6">
+        <div className="text-center space-y-4">
+          <h2 className="font-display text-2xl text-ink font-semibold">Order Not Found</h2>
+          <p className="font-mono-brand text-[11px] uppercase tracking-widest text-ink/40">
+            The referenced order could not be retrieved.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 font-mono-brand text-[11px] uppercase tracking-widest text-rust font-bold hover:underline"
+          >
+            <ArrowLeft className="h-3 w-3" /> Back to Store
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16 text-center space-y-8">
-      <div className="space-y-3">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <CheckCircle className="h-8 w-8" />
-        </div>
-        <h2 className="text-3xl font-extrabold text-white">Order Confirmed!</h2>
-        <p className="text-sm text-slate-400">Thank you for shopping with Varek.in. Your payment was verified successfully.</p>
-        <div className="font-mono text-xs font-semibold text-indigo-400 select-all pt-2">Order ID: {order._id}</div>
-      </div>
-
-      {/* Details Box */}
-      <div className="rounded-xl border border-slate-800 bg-[#111827] text-left p-6 space-y-6">
-        <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-          Summary Details
-        </h3>
-        
-        {/* Items */}
-        <div className="divide-y divide-slate-800 space-y-2">
-          {order.items.map((item: any, idx: number) => (
-            <div key={idx} className="flex justify-between items-center text-xs pt-2 first:pt-0">
-              <div>
-                <p className="font-semibold text-slate-200">{item.sku}</p>
-                <span className="text-[10px] text-slate-500">Quantity: {item.qty}</span>
-              </div>
-              <span className="font-bold text-white">${(item.price_at_purchase * item.qty).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Shipping Address */}
-        <div className="border-t border-slate-800 pt-4 flex gap-3 text-xs text-slate-400">
-          <MapPin className="h-4 w-4 text-slate-600 shrink-0 mt-0.5" />
-          <div>
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Delivery Address</span>
-            <p className="text-slate-200 mt-1">{order.shipping_address.street}</p>
-            <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zip_code}</p>
-            <p className="uppercase">{order.shipping_address.country}</p>
+    <div className="bg-cream min-h-screen py-16 px-6">
+      <div className="mx-auto max-w-2xl text-center space-y-8">
+        {/* Success state */}
+        <div className="space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-olive/10 text-olive border-2 border-olive/20">
+            <CheckCircle className="h-8 w-8" />
+          </div>
+          <h1 className="font-display text-5xl text-ink font-semibold">Order Confirmed!</h1>
+          <p className="text-ink/60 text-base max-w-md mx-auto">
+            Thank you for shopping with Varek. Your payment was verified and your order is being prepared.
+          </p>
+          <div className="inline-block rounded-lg border border-line bg-paper px-4 py-2 font-mono text-xs text-ink/50 select-all">
+            Order ID: {order._id}
           </div>
         </div>
 
-        {/* Total Price */}
-        <div className="border-t border-slate-800 pt-4 flex justify-between text-sm font-bold">
-          <span className="text-white">Total Charge</span>
-          <span className="text-indigo-400">${order.total_amount.toFixed(2)}</span>
-        </div>
-      </div>
+        {/* Details card */}
+        <div className="rounded-xl border border-line bg-paper text-left p-7 space-y-6 stitched">
+          <h3 className="font-mono-brand text-[11px] font-bold text-ink/50 uppercase tracking-widest border-b border-line pb-3">
+            Order Summary
+          </h3>
 
-      <div className="flex justify-center gap-4 pt-4">
-        <Link
-          href="/account/orders"
-          className="rounded-lg border border-slate-800 bg-slate-850/50 hover:bg-slate-800 hover:text-white px-5 py-2.5 text-xs font-bold text-slate-300 transition-colors"
-        >
-          Track Order
-        </Link>
-        <Link
-          href="/shop"
-          className="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-xs font-bold text-white flex items-center gap-1.5 transition-all"
-        >
-          Continue Shopping
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+          {/* Items */}
+          <div className="divide-y divide-line space-y-2">
+            {order.items.map((item: any, idx: number) => (
+              <div
+                key={idx}
+                className="flex justify-between items-center text-sm pt-3 first:pt-0"
+              >
+                <div>
+                  <p className="font-mono-brand font-bold text-ink text-[11px] uppercase tracking-widest">
+                    {item.sku}
+                  </p>
+                  <span className="font-mono-brand text-[10px] text-ink/40">
+                    Qty: {item.qty}
+                  </span>
+                </div>
+                <span className="font-mono-brand font-bold text-ink">
+                  ₹{(item.price_at_purchase * item.qty).toFixed(0)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Shipping */}
+          <div className="border-t border-line pt-5 flex gap-3 text-sm text-ink/60">
+            <MapPin className="h-4 w-4 text-rust shrink-0 mt-0.5" />
+            <div>
+              <span className="font-mono-brand text-[10px] font-bold text-ink/40 uppercase tracking-widest block mb-1">
+                Delivery Address
+              </span>
+              <p className="font-semibold text-ink">{order.shipping_address.street}</p>
+              <p>
+                {order.shipping_address.city}, {order.shipping_address.state}{" "}
+                {order.shipping_address.zip_code}
+              </p>
+              <p className="uppercase">{order.shipping_address.country}</p>
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="border-t border-line pt-4 flex justify-between font-bold text-sm">
+            <span className="text-ink">Total Charged</span>
+            <span className="font-mono-brand text-rust text-base">
+              ₹{order.total_amount.toFixed(0)}
+            </span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-center gap-4 pt-2">
+          <Link href="/account/orders" className="btn-ghost text-xs px-5 py-2.5">
+            Track Order
+          </Link>
+          <Link href="/shop" className="btn-primary text-xs px-5 py-2.5">
+            Continue Shopping <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </div>
     </div>
   );
